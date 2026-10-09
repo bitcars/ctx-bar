@@ -6,6 +6,8 @@
   "types": "./types/index.d.ts",
   "userConfig": {
     "showCost": { "type": "boolean", "title": "Show session cost", "description": "Show the session's cost in the status line", "default": true },
-    "warnAt": { "type": "number", "title": "Warn at percent", "description": "Prefix the line with ! at or above this fill percentage", "default": 80 }
+    "warnAt": { "type": "number", "title": "Warn at percent", "description": "Prefix the line with ! at or above this fill percentage", "default": 80 },
+    "pricingFile": { "type": "string", "title": "Price table file", "description": "JSON price table (USD per million tokens per model); relative to the session's working directory, or absolute. Read once at session start", "default": "" },
+    "costSource": { "type": "string", "title": "Cost source", "description": "Where the $ figure comes from: engine (default), table (your pricingFile), or both", "default": "engine" }
   }
 }

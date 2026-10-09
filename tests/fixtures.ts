@@ -2,15 +2,17 @@
 // .sisyphus/plans/evidence/ref-d7.ts (an independent reference written before the implementation).
 import type { View } from '../types'
 import type { FormatOpts } from '../hooks/format'
+import type { TurnUsage } from 'claude-code'
+import type { UsageCounts } from '../hooks/pricing'
 
 export type Fixture = { tokens: number | null; window: number; rawMax: number | null; threshold: number | null; autoOn: boolean; cachePct: number | null; cost: number | null; lastCompact: View['lastCompact'] }
 export const D: Fixture = { tokens: 0, window: 200000, rawMax: 200000, threshold: 167000, autoOn: true, cachePct: null, cost: null, lastCompact: null }
-export const O: FormatOpts = { showCost: true, warnAt: 80 }
+export const O: FormatOpts = { showCost: true, warnAt: 80, costSource: 'engine', pricingFile: '' }
 const M1 = { rawMax: 1000000, window: 1000000, threshold: 967000 }
 const M2 = { rawMax: 2000000, window: 2000000, threshold: 1967000 }
 
 export function toView(f: Fixture): View {
-  return { tokens: f.tokens, window: f.window, cost: f.cost, cachePct: f.cachePct, lastCompact: f.lastCompact, win: f.rawMax === null ? null : { rawMax: f.rawMax, threshold: f.threshold, autoOn: f.autoOn } }
+  return { tokens: f.tokens, window: f.window, cost: f.cost, cachePct: f.cachePct, lastCompact: f.lastCompact, win: f.rawMax === null ? null : { rawMax: f.rawMax, threshold: f.threshold, autoOn: f.autoOn }, table: null, spend: {}, warned: [], lastModel: null, tableNoted: false }
 }
 
 export type Row = { id: string; view: View; opts: FormatOpts; expected: string | undefined }
@@ -101,3 +103,25 @@ export const E_STR = {
 /** Plan v2 §4c failing-ID sets, frozen before code (+ F47, F51, F52 added by D7; no existing row changed). */
 export const KILL_KROUND = ["F5", "F6", "F7", "F9", "F11", "F12", "F16", "F17", "F18", "F18a", "F18b", "F22", "F23", "F24", "F24a", "F24b", "F25", "F26", "F27", "F28", "F29", "F30", "F33", "F35", "F37", "F39", "F40", "F47", "F51", "F52"] as const
 export const KILL_DUEGT = ["F13"] as const
+
+// ---- Pricing fixtures (plan ctx-bar-pricing v2): USD per million tokens.
+
+export const TD_TEXT = '{"m-a":{"input":3,"output":15,"cacheRead":0.3,"cacheWrite":3.75,"longContext":{"above":200000,"input":6,"output":22.5,"cacheRead":0.6,"cacheWrite":7.5}},"m-b":{"input":1,"output":5,"cacheRead":0.1,"cacheWrite":1.25},"default":{"input":0.5,"output":2.5,"cacheRead":0.05,"cacheWrite":0.625}}'
+export const TN_TEXT = '{"m-a":{"input":3,"output":15,"cacheRead":0.3,"cacheWrite":3.75,"longContext":{"above":200000,"input":6,"output":22.5,"cacheRead":0.6,"cacheWrite":7.5}},"m-b":{"input":1,"output":5,"cacheRead":0.1,"cacheWrite":1.25}}'
+
+/** One answered call's usage: the four counts and the model that answered. */
+export const u = (model: string, input: number, output: number, read: number, write: number): TurnUsage => ({
+  input_tokens: input,
+  output_tokens: output,
+  cache_read_input_tokens: read,
+  cache_creation_input_tokens: write,
+  model,
+})
+
+/** A compaction's usage, which names no model. */
+export const mu = (input: number, output: number, read: number, write: number): UsageCounts => ({
+  input_tokens: input,
+  output_tokens: output,
+  cache_read_input_tokens: read,
+  cache_creation_input_tokens: write,
+})

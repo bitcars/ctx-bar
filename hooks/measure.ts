@@ -38,9 +38,14 @@ export const INITIAL: View = {
   cachePct: null,
   win: null,
   lastCompact: null,
+  table: null,
+  spend: {},
+  warned: [],
+  lastModel: null,
+  tableNoted: false,
 }
 
-/** Live figures cleared by /clear and resume; the compaction window stays. */
+/** Live figures cleared by /clear and resume; the compaction window and the price table stay. */
 export function cleared(v: View): View {
-  return { ...v, tokens: null, cost: null, cachePct: null, lastCompact: null }
+  return { ...v, tokens: null, cost: null, cachePct: null, lastCompact: null, spend: {}, warned: [], lastModel: null }
 }

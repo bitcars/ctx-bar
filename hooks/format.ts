@@ -1,16 +1,44 @@
 // Pure: the status-line text (plan v2 §1). No `$`, no state.
 import type { PluginOptions } from 'claude-code'
 import type { View } from '../types'
+import { priceOf } from './pricing'
 
-export type FormatOpts = { showCost: boolean; warnAt: number }
+/** Where the `$` figure comes from: the engine's, the user's price table, or both side by side. */
+export type CostSource = 'engine' | 'table' | 'both'
 
-/** userConfig → format options; a missing or non-finite `warnAt` is 80 (D7). */
+export type FormatOpts = { showCost: boolean; warnAt: number; costSource: CostSource; pricingFile: string }
+
+const COST_SOURCES: readonly string[] = ['engine', 'table', 'both']
+
+/**
+ * userConfig → format options; a missing or non-finite `warnAt` is 80 (D7). `costSource` takes
+ * exactly `engine`, `table` or `both`, anything else is `engine`; a non-string `pricingFile` is ''.
+ */
 export function optsFrom(options: PluginOptions): FormatOpts {
-  const warnAt = options.warnAt
+  const { warnAt, costSource, pricingFile } = options
   return {
     showCost: options.showCost !== false,
     warnAt: typeof warnAt === 'number' && Number.isFinite(warnAt) ? warnAt : 80,
+    costSource: typeof costSource === 'string' && COST_SOURCES.includes(costSource) ? (costSource as CostSource) : 'engine',
+    pricingFile: typeof pricingFile === 'string' ? pricingFile : '',
   }
+}
+
+const usable = (x: number | null): x is number => x !== null && Number.isFinite(x) && x >= 0
+
+/**
+ * The cost segment, or null. `table` falls back to the engine figure when the table cannot price
+ * the spend (D4); `both` shows whichever side exists, plain, and `$e (est $t)` when both do (D3).
+ */
+export function costSegment(v: View, o: FormatOpts): string | null {
+  if (!o.showCost) return null
+  const engine = usable(v.cost) ? v.cost : null
+  const priced = o.costSource !== 'engine' && v.table ? priceOf(v.spend, v.table) : null
+  const table = usable(priced) ? priced : null
+  if (o.costSource === 'engine') return engine === null ? null : usd(engine)
+  if (o.costSource === 'table') return table !== null ? usd(table) : engine !== null ? usd(engine) : null
+  if (engine !== null && table !== null) return `${usd(engine)} (est ${usd(table)})`
+  return engine !== null ? usd(engine) : table !== null ? usd(table) : null
 }
 
 /** The two rules a mutant may swap (plan v2 §4c); production uses DEFAULTS. */
@@ -76,7 +104,8 @@ export function makeFormat(rules: FormatRules): (v: View, o: FormatOpts) => stri
         segs.push(rules.isDue(v.tokens, threshold) ? 'compact due' : `compact in ${kUnits(threshold - v.tokens)}`)
       }
     }
-    if (o.showCost && v.cost !== null && Number.isFinite(v.cost) && v.cost >= 0) segs.push(usd(v.cost))
+    const cost = costSegment(v, o)
+    if (cost !== null) segs.push(cost)
 
     return [head, ...segs].join(' · ')
   }
