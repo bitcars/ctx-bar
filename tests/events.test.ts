@@ -12,6 +12,7 @@ import type {
 import type { Engine } from 'claude-code/testing'
 
 import { E_STR } from './fixtures'
+import { TD_TEXT, TN_TEXT, mu, u } from './fixtures'
 
 // ---- the harness (plan v2 §4d): bottom answers for every event the plugin's `next` reaches,
 // and recorders for every `$` call the plugin makes. Registered before the first `$` call.
@@ -41,6 +42,16 @@ type H = {
   finalStep: boolean
   /** The ui.status count when the bottom session.end ran (R2-5). */
   statusesAtEnd: number | undefined
+  /** Pricing (plan ctx-bar-pricing v2 §1d): files the fs.read bottom serves, keyed by path. */
+  files: Record<string, string>
+  /** The paths `$.fs.read` asked for. */
+  reads: string[]
+  /** `state.get` and `state.set` calls that reached the bottom. */
+  stateCalls: number
+  /** `state.set` calls that reached the bottom. */
+  sets: number
+  /** A stored payload `state.get` answers until the first `state.set` (PX10). */
+  seed: unknown
 }
 
 const MSG = [{ role: 'user' as const, text: 'summary', toolUses: [] }]
@@ -116,6 +127,11 @@ function harness(on: On): H {
     bottomYielded: 0,
     finalStep: false,
     statusesAtEnd: undefined,
+    files: {},
+    reads: [],
+    stateCalls: 0,
+    sets: 0,
+    seed: undefined,
   }
 
   on('session.usage', ($, e) => {
@@ -136,7 +152,19 @@ function harness(on: On): H {
     }
     return { value }
   })
-  on('state.set', ($, e, next) => (h.stateDeny ? { deny: 'state refused' } : next(e)))
+  on('state.set', ($, e, next) => { h.stateCalls += 1; h.sets += 1; return h.stateDeny ? { deny: 'state refused' } : next(e) })
+  on('state.get', ($, e, next) => {
+    h.stateCalls += 1
+    return h.seed !== undefined && h.sets === 0 ? { value: { value: h.seed as never, version: 0 } } : next(e)
+  })
+  on('fs.read', ($, e) => {
+    // The engine hands the hook the resolved path: a relative pricingFile arrives under the working directory.
+    h.reads.push(e.path)
+    const key = Object.keys(h.files).find(k => e.path === k || (!k.startsWith('/') && e.path.endsWith(`/${k}`)))
+    const text = key === undefined ? undefined : h.files[key]
+    if (text === undefined) throw new Error(`ENOENT: ${e.path}`)
+    return { value: text }
+  })
   on('session.messages', () => {
     h.messagesCalls += 1
     return { value: [] }
@@ -525,4 +553,258 @@ describe('guard', () => {
       expect(guardLogs[0]?.to).toBe('debug')
     })
   }
+})
+
+// ---- Pricing event rows (plan ctx-bar-pricing v2 §1d). h.cost is 0.36 before start; rows assert after the first step.
+describe('pricing events', () => {
+  const T = { pricingFile: 't.json', costSource: 'table' } as const
+  const S1 = u('m-a', 12000, 4000, 150000, 20000)
+  const ZERO_A = u('m-a', 0, 0, 0, 0)
+  const pricingLogs = (h: H) => {
+    const ls = h.logs.filter(l => l.text.startsWith('ctx-bar: pricing'))
+    for (const l of ls) expect(l.to).toBe('debug')
+    return ls.map(l => l.text)
+  }
+  const guardLogs = (h: H) => h.logs.filter(l => /^ctx-bar: (session|turn)\.[a-z]+: /.test(l.text))
+  const ends = (h: H, tail: string) => expect(last(h)?.endsWith(tail)).toBe(true)
+  const setup = (on: On, text: string | null = TD_TEXT, path = 't.json') => {
+    const h = harness(on)
+    h.cost = 0.36
+    if (text !== null) h.files[path] = text
+    return h
+  }
+  const stepWith = async ($: Engine, h: H, usage: TurnUsage, agentId?: string) => {
+    h.stepUsage = usage
+    return step($, h, agentId)
+  }
+  const compactWith = async ($: Engine, h: H, usage: ReturnType<typeof mu>, trigger: 'manual' | 'precompute' = 'manual', agentId?: string) => {
+    h.compact = { messages: MSG, tokensBefore: 182000, tokensAfter: 24000, usage }
+    return compact($, trigger, agentId)
+  }
+  /** PX1's sequence: start, then one main step with S1 ($0.216). */
+  const px1 = async ($: Engine, h: H) => {
+    await start($)
+    return stepWith($, h, S1)
+  }
+
+  test('PX1 a good table prices the main step by the answering model', { options: T }, async ($, on) => {
+    const h = setup(on)
+    const s = await px1($, h)
+    expect(h.reads.length).toBe(1)
+    expect(h.reads[0]?.endsWith('/t.json')).toBe(true)
+    expect(s.r.usage?.model).toBe('m-a')
+    expect(s.r.usage?.model).not.toBe('claude-test') // the request's e.model
+    ends(h, ' · $0.21')
+    expect(pricingLogs(h)).toEqual([])
+  })
+
+  test('PX2 subagent usage counts toward spend; the subagent step writes no status', { options: T }, async ($, on) => {
+    const h = setup(on)
+    await start($)
+    const n = h.statuses.length
+    await stepWith($, h, S1, 'a1')
+    expect(h.statuses.length).toBe(n)
+    await stepWith($, h, S1)
+    ends(h, ' · $0.43')
+  })
+
+  for (const [id, text, reason] of [['PX3', '{', 't.json: not JSON'], ['PX4', null, 't.json: read failed']] as const) {
+    test(`${id} an unusable table shows the engine figure and logs once`, { options: T }, async ($, on) => {
+      const h = setup(on, text)
+      await start($)
+      const n = h.statuses.length
+      for (let i = 0; i < 3; i++) await stepWith($, h, S1)
+      expect(h.statuses.length).toBe(n + 3)
+      for (const st of h.statuses.slice(1)) expect(st?.endsWith(' · $0.36')).toBe(true)
+      expect(pricingLogs(h)).toEqual([`ctx-bar: pricing: ${reason}`])
+    })
+  }
+
+  test('PX5 compaction usage is priced at the last main model', { options: T }, async ($, on) => {
+    const h = setup(on)
+    await px1($, h)
+    await compactWith($, h, mu(0, 1000, 0, 0))
+    await stepWith($, h, ZERO_A)
+    ends(h, ' · $0.23')
+  })
+
+  test('PX5b precompute and subagent compaction usage count, and draw nothing', { options: T }, async ($, on) => {
+    const h = setup(on)
+    await px1($, h)
+    const n = h.statuses.length
+    await compactWith($, h, mu(0, 1000, 0, 0), 'precompute')
+    await compactWith($, h, mu(0, 1000, 0, 0), 'manual', 'a1')
+    expect(h.statuses.length).toBe(n)
+    await stepWith($, h, ZERO_A)
+    ends(h, ' · $0.24')
+  })
+
+  test('PX5c a subagent step does not set the model compaction is priced at', { options: T }, async ($, on) => {
+    const h = setup(on)
+    await px1($, h)
+    await stepWith($, h, u('m-b', 0, 0, 0, 0), 'a1')
+    await compactWith($, h, mu(0, 1000, 0, 0))
+    await stepWith($, h, ZERO_A)
+    ends(h, ' · $0.23')
+  })
+
+  test('PX5d compaction before any main step is priced at default', { options: T }, async ($, on) => {
+    const h = setup(on)
+    await start($)
+    await compactWith($, h, mu(0, 1000000, 0, 0))
+    await stepWith($, h, ZERO_A)
+    ends(h, ' · $2.50')
+  })
+
+  test('PX5e compaction usage with no model and no default is dropped, logged once, and the table stays', { options: T }, async ($, on) => {
+    const h = setup(on, TN_TEXT)
+    await start($)
+    await compactWith($, h, mu(0, 1000, 0, 0))
+    await compactWith($, h, mu(0, 1000, 0, 0))
+    await stepWith($, h, S1)
+    expect(pricingLogs(h)).toEqual(['ctx-bar: pricing: compaction usage dropped (no model)'])
+    ends(h, ' · $0.21')
+  })
+
+  test('PX5f a compaction is added once, not once per later step', { options: T }, async ($, on) => {
+    const h = setup(on)
+    await px1($, h)
+    await compactWith($, h, mu(0, 1000, 0, 0))
+    await stepWith($, h, ZERO_A)
+    ends(h, ' · $0.23')
+    await stepWith($, h, ZERO_A)
+    ends(h, ' · $0.23')
+  })
+
+  test('PX6 /clear resets spend and keeps the table without re-reading it', { options: T }, async ($, on) => {
+    const h = setup(on)
+    await px1($, h)
+    await end($, 'clear')
+    await stepWith($, h, S1)
+    ends(h, ' · $0.21')
+    expect(h.reads.length).toBe(1)
+  })
+
+  test('PX7 an unpriced model shows the engine figure and is logged once per id', { options: T }, async ($, on) => {
+    const h = setup(on, TN_TEXT)
+    await start($)
+    const n = h.statuses.length
+    await stepWith($, h, u('m-z', 1, 0, 0, 0))
+    await stepWith($, h, u('m-z', 1, 0, 0, 0))
+    await stepWith($, h, u('m-y', 1, 0, 0, 0))
+    expect(h.statuses.length).toBe(n + 3)
+    for (const st of h.statuses.slice(1)) expect(st?.endsWith(' · $0.36')).toBe(true)
+    expect(pricingLogs(h)).toEqual(['ctx-bar: pricing: unpriced model m-z', 'ctx-bar: pricing: unpriced model m-y'])
+  })
+
+  test('PX7b /clear resets the logged ids', { options: T }, async ($, on) => {
+    const h = setup(on, TN_TEXT)
+    await start($)
+    await stepWith($, h, u('m-z', 1, 0, 0, 0))
+    await end($, 'clear')
+    await stepWith($, h, u('m-z', 1, 0, 0, 0))
+    expect(pricingLogs(h)).toEqual(['ctx-bar: pricing: unpriced model m-z', 'ctx-bar: pricing: unpriced model m-z'])
+  })
+
+  test('PX8 the engine source reads no file and makes no extra state call', { options: { pricingFile: 't.json' } }, async ($, on) => {
+    const h = setup(on)
+    await px1($, h)
+    expect(h.reads).toEqual([])
+    ends(h, ' · $0.36')
+    // start and one step: one update each (a get and a set); the {} baseline is PX8b
+    expect(h.stateCalls).toBe(4)
+  })
+
+  test('PX8b baseline: {} options, the same sequence, makes 4 state calls', async ($, on) => {
+    const h = setup(on)
+    await px1($, h)
+    expect(h.stateCalls).toBe(4)
+  })
+
+  test('PX9 table source without a file shows the engine figure and says so once', { options: { costSource: 'table' } }, async ($, on) => {
+    const h = setup(on)
+    await start($)
+    const n = h.statuses.length
+    await stepWith($, h, S1)
+    expect(h.statuses.length).toBe(n + 1)
+    ends(h, ' · $0.36')
+    expect(pricingLogs(h)).toEqual(['ctx-bar: pricing: no pricingFile'])
+  })
+
+  test('PX10 a value stored under shape v2 is dropped, not read (D8)', { options: { pricingFile: 't.json', costSource: 'both' } }, async ($, on) => {
+    const h = setup(on, TN_TEXT)
+    h.seed = { shape: 'v2', value: { tokens: 1000, window: 200000, cost: 9.99, cachePct: 42, win: { rawMax: 200000, threshold: 167000, autoOn: true }, lastCompact: null } }
+    await start($)
+    await stepWith($, h, u('m-z', 0, 0, 0, 0))
+    await stepWith($, h, S1)
+    expect(guardLogs(h)).toEqual([])
+    expect(pricingLogs(h)).toEqual(['ctx-bar: pricing: unpriced model m-z'])
+    ends(h, ' · $0.36 (est $0.21)')
+  })
+
+  test('PX11 both sources side by side', { options: { pricingFile: 't.json', costSource: 'both' } }, async ($, on) => {
+    const h = setup(on)
+    await px1($, h)
+    ends(h, ' · $0.36 (est $0.21)')
+  })
+
+  test('PX12 under default options a subagent step makes no state call', async ($, on) => {
+    const h = setup(on)
+    await start($)
+    const n = h.stateCalls
+    await stepWith($, h, S1, 'a1')
+    expect(h.stateCalls).toBe(n)
+  })
+
+  test('PX12p presence: with a table a subagent step makes state calls', { options: T }, async ($, on) => {
+    const h = setup(on)
+    await start($)
+    const n = h.stateCalls
+    await stepWith($, h, S1, 'a1')
+    expect(h.stateCalls).toBeGreaterThan(n)
+  })
+
+  test('PX13 a refused write on a subagent step logs and never blanks the bar', { options: T }, async ($, on) => {
+    const h = setup(on)
+    await start($)
+    const n = h.statuses.length
+    h.stateDeny = true
+    await stepWith($, h, S1, 'a1')
+    expect(h.statuses.length).toBe(n)
+    const sub = h.logs.filter(l => /^ctx-bar: turn\.step \(subagent\): /.test(l.text))
+    expect(sub.length).toBe(1)
+    expect(sub[0]?.to).toBe('debug')
+  })
+
+  test('PX14 no table loaded (as after a hot reload) is said once', { options: T }, async ($, on) => {
+    const h = setup(on)
+    await stepWith($, h, S1)
+    await stepWith($, h, S1)
+    expect(h.statuses.length).toBe(2)
+    for (const st of h.statuses) expect(st?.endsWith(' · $0.36')).toBe(true)
+    expect(pricingLogs(h)).toEqual(['ctx-bar: pricing: no table loaded'])
+  })
+
+  test('PX15 an absolute pricingFile is read as given (exact path, no suffix match)', { options: { pricingFile: '/abs/t.json', costSource: 'table' } }, async ($, on) => {
+    const h = setup(on, TD_TEXT, '/abs/t.json')
+    await px1($, h)
+    expect(h.reads).toEqual(['/abs/t.json'])
+    ends(h, ' · $0.21')
+  })
+
+  test('PX16 a bad usage count is skipped, the bar keeps drawing, and it is logged once (A7)', { options: T }, async ($, on) => {
+    const h = setup(on)
+    await start($)
+    const n = h.statuses.length
+    const before = last(h)
+    // a large bad count would move the figure if it were summed (-1e9 input is -$3000 on m-a)
+    await stepWith($, h, u('m-a', -1e9, 0, 0, 0))
+    expect(last(h)).toBe(before)
+    await stepWith($, h, u('m-a', NaN, 0, 0, 0))
+    await stepWith($, h, u('m-a', 0, -1, 0, 0), 'a1')
+    await stepWith($, h, S1)
+    expect(h.statuses.length).toBe(n + 3)
+    ends(h, ' · $0.21')
+    expect(pricingLogs(h)).toEqual(['ctx-bar: pricing: usage count skipped (not a finite number ≥ 0)'])
+  })
 })

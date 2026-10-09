@@ -73,9 +73,9 @@ describe('cachePct', () => {
 })
 
 describe('optsFrom', () => {
-  test('O1 a NaN warnAt falls back to 80 (D7)', () => expect(optsFrom({ warnAt: NaN })).toEqual({ showCost: true, warnAt: 80 }))
-  test('O2 no options: the defaults', () => expect(optsFrom({})).toEqual({ showCost: true, warnAt: 80 }))
-  test('O3 options pass through', () => expect(optsFrom({ showCost: false, warnAt: 90 })).toEqual({ showCost: false, warnAt: 90 }))
+  test('O1 a NaN warnAt falls back to 80 (D7)', () => expect(optsFrom({ warnAt: NaN })).toMatchObject({ showCost: true, warnAt: 80 }))
+  test('O2 no options: the defaults', () => expect(optsFrom({})).toMatchObject({ showCost: true, warnAt: 80 }))
+  test('O3 options pass through', () => expect(optsFrom({ showCost: false, warnAt: 90 })).toMatchObject({ showCost: false, warnAt: 90 }))
 })
 
 describe('control and mutants', () => {
