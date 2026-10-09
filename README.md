@@ -124,3 +124,7 @@ Custom pricing (`costSource` `table` or `both`):
 - (LOW) A table edit needs a new session.
 - (INFO) A machine-level, admin-managed `modelPricing` reprices the engine's figure; not tested.
 - (LOW) If the compaction's summarizer request also reaches `turn.step`, compaction is counted twice (not checkable headless).
+
+## License
+
+MIT. See [LICENSE](LICENSE). The package is marked `"private": true` and is not published to npm.

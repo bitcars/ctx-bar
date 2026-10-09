@@ -2,3 +2,4 @@
 node_modules/
 .sisyphus/.resume-quiet
 .sisyphus/checkpoints/
+.sisyphus/
