@@ -50,7 +50,7 @@ per call in spike 1 and V6.
 mkdir -p .claude-plugin/types/claude-code   # types for tsc (gitignored), from the plugin-authoring skill
 cp <skill>/types/claude-code.d.ts .claude-plugin/types/claude-code/index.d.ts
 claude plugin validate .
-npx -y -p typescript@5.6.3 tsc -p .
+npm ci --ignore-scripts && npm run typecheck   # typescript 5.6.3, pinned and integrity-checked by package-lock.json
 claude plugin test .                       # pure rows, control, mutant kill sets, engine rows
 S=<scratch dir> bash scripts/neg.sh        # negative runs: each mutation must be caught
 ```
