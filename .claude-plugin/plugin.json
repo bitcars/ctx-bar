@@ -1,0 +1,11 @@
+{
+  "name": "ctx-bar",
+  "version": "0.1.0",
+  "description": "Live context-window bar in the status line: fill, tokens/window, cache share, auto-compact headroom, cost",
+  "author": { "name": "bitcars" },
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "showCost": { "type": "boolean", "title": "Show session cost", "description": "Show the session's cost in the status line", "default": true },
+    "warnAt": { "type": "number", "title": "Warn at percent", "description": "Prefix the line with ! at or above this fill percentage", "default": 80 }
+  }
+}
