@@ -12,7 +12,7 @@ import { addUsage, entryFor, hasBadCount, parseTable, type Table, type UsageCoun
 // v3: the view gained the price table and the spend (plan ctx-bar-pricing v2 §2, D8)
 let viewShape = 'v3'
 // @neg:shape-v2
-const view = atom({ plugin: 'ctx-bar', key: 'view' } as const, INITIAL, { shape: viewShape })
+const view = atom({ plugin: 'usage', key: 'view' } as const, INITIAL, { shape: viewShape })
 
 /** `warned` holds this marker once compaction usage has been dropped for want of a model. */
 // Shares `warned` with model ids; real model ids never start with '#', so a collision is unreachable (A-L3).

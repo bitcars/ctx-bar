@@ -1,6 +1,6 @@
 {
-  "name": "ctx-bar",
-  "version": "0.1.0",
+  "name": "usage",
+  "version": "0.2.0",
   "description": "Live context-window bar in the status line: fill, tokens/window, cache share, auto-compact headroom, cost",
   "author": { "name": "bitcars" },
   "types": "./types/index.d.ts",

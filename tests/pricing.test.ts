@@ -117,7 +117,7 @@ describe('parseTable', () => {
 })
 
 describe('cost segment', () => {
-  const B = 'ctx ▕██░░░░░░░░▏ 22% 45k/200k · compact in 121k'
+  const B = '▕██░░░░░░░░▏ 22% 45k/200k · compact in 121k'
   const base = (over: Partial<View>): View => ({ ...toView({ ...D, tokens: 45335, cost: 0.36 }), table: TD, spend: spendOf(TD, times(10, u('m-a', 12000, 4000, 150000, 20000))), ...over })
   const onMz = { table: TN, spend: spendOf(TN, [u('m-z', 1000000, 0, 0, 0)]) }
   const huge: Table = Object.assign(Object.create(null) as Table, { 'm-a': { input: Number.MAX_VALUE, output: 0, cacheRead: 0, cacheWrite: 0 } })

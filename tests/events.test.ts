@@ -316,7 +316,7 @@ describe('events', () => {
       // a measure with no tokens shows whatever compaction note the state holds: there must be none
       await measure($, h, undefined, 0.51)
       expect(h.statuses.length).toBe(4)
-      expect(last(h)).toBe('ctx – /200k (model 1M) · $0.51')
+      expect(last(h)).toBe('– /200k (model 1M) · $0.51')
       // ...and the cache figure was not touched either (R2-3)
       await measure($, h, 46800, 0.51)
       expect(last(h)).toBe(E_STR.E3)
@@ -450,7 +450,7 @@ describe('events', () => {
     expect(last(h)).toBe(E_STR.E13)
     // a tokens-less measure shows whatever note the state still holds: the step must have cleared it (R2-7)
     await measure($, h, undefined, 0.52)
-    expect(last(h)).toBe('ctx – /200k (model 1M) · $0.52')
+    expect(last(h)).toBe('– /200k (model 1M) · $0.52')
   })
 
   test('E14 a measure without cost keeps the last cost', async ($, on) => {
