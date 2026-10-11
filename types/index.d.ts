@@ -35,6 +35,6 @@ export type View = {
 
 declare module 'claude-code' {
   interface PluginState {
-    'ctx-bar': { view: Shaped<View> }
+    'usage': { view: Shaped<View> }
   }
 }

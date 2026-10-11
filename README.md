@@ -4,8 +4,10 @@ A Claude Code mod that keeps the context window in the status line and updates i
 request of a turn, not only at its end.
 
 ```
-ctx ▕██░░░░░░░░▏ 22% 45k/200k (model 1M) · cache 99% · compact in 121k · $0.36
+⚠ usage: ▕██░░░░░░░░▏ 22% 45k/200k (model 1M) · cache 99% · compact in 121k · $0.36
 ```
+
+The `⚠ usage:` label is drawn by Claude Code before every plugin's status line; the mod's own text starts at the bar.
 
 | Segment | Meaning |
 |---|---|
@@ -15,8 +17,8 @@ ctx ▕██░░░░░░░░▏ 22% 45k/200k (model 1M) · cache 99% ·
 | `compact in 121k` / `compact due` / `autocompact off` | headroom until auto-compaction |
 | `$0.36` | session cost (turn off with `showCost`): the engine's figure, or your price table's (`costSource`) |
 | `$0.36 (est $0.41)` | `costSource: both`: the engine's figure, then your table's estimate |
-| `!` prefix | fill at or above `warnAt` (default 80%) |
-| `ctx – /200k · compacted 182k→24k` | no reading yet: a fresh session, after `/clear`, or after a compaction (the note clears on the next response) |
+| `!` before the bar (`!▕…`) | fill at or above `warnAt` (default 80%) |
+| `– /200k · compacted 182k→24k` | no reading yet: a fresh session, after `/clear`, or after a compaction (the note clears on the next response) |
 | (blank) | no usable window yet, or the mod's own work failed (a `ctx-bar:` line in the debug log says why) |
 
 Requires Claude Code 2.1.295 or later (the function-hooks API is early access; names may move).
@@ -36,6 +38,9 @@ Options (`userConfig`):
 | `pricingFile` | string, `""` | a JSON price table (below); relative to the session's working directory, or absolute; `~` is not expanded |
 | `costSource` | string, `"engine"` | `engine` (the engine's cost), `table` (your table's), or `both` (`$engine (est $table)`); any other value is `engine` |
 
+The plugin registers as `usage`, so its options live under `pluginConfigs.usage`. Versions before this one
+registered as `ctx-bar`; move any `pluginConfigs."ctx-bar"` options to `"usage"`. The repository and directory keep the name ctx-bar.
+
 ### Custom pricing
 
 With `costSource` set to `table` or `both`, ctx-bar prices the session itself from `pricingFile`, in USD
@@ -53,7 +58,7 @@ per million tokens:
 ```
 
 ```
-claude --plugin-dir /path/to/ctx-bar --settings '{"pluginConfigs":{"ctx-bar":{"options":{"pricingFile":"/path/to/prices.json","costSource":"both"}}}}'
+claude --plugin-dir /path/to/ctx-bar --settings '{"pluginConfigs":{"usage":{"options":{"pricingFile":"/path/to/prices.json","costSource":"both"}}}}'
 ```
 
 - A model is matched by its exact id (the one that answered, subagents included), else by `default`; there is no prefix match.
