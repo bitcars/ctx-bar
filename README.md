@@ -4,7 +4,7 @@ A Claude Code mod that keeps the context window in the status line and updates i
 request of a turn, not only at its end.
 
 ```
-⚠ usage: ▕██░░░░░░░░▏ 22% 45k/200k (model 1M) · cache 99% · compact in 121k · $0.36
+⚠ usage: ▕██░░░░░░░░▏ 22% 45k/200k · cache 99% · compact in 121k · $0.36
 ```
 
 The `⚠ usage:` label is drawn by Claude Code before every plugin's status line; the mod's own text starts at the bar.
@@ -12,7 +12,6 @@ The `⚠ usage:` label is drawn by Claude Code before every plugin's status line
 | Segment | Meaning |
 |---|---|
 | bar, `22%`, `45k/200k` | tokens the last request was answered over, against the auto-compact window |
-| `(model 1M)` | the model's own window, shown only when its k-units differ from the auto-compact window's |
 | `cache 99%` | share of the last main-thread request served from the prompt cache |
 | `compact in 121k` / `compact due` / `autocompact off` | headroom until auto-compaction |
 | `$0.36` | session cost (turn off with `showCost`): the engine's figure, or your price table's (`costSource`) |

@@ -85,19 +85,18 @@ export function makeFormat(rules: FormatRules): (v: View, o: FormatOpts) => stri
     const isStale = v.win !== null && v.win.rawMax > v.window
     const threshold = isStale ? null : (v.win?.threshold ?? null)
     const autoOn = v.win?.autoOn ?? true
-    const model = kUnits(v.window) !== kUnits(raw) ? ` (model ${kUnits(v.window)})` : ''
     const segs: string[] = []
     let head: string
 
     if (v.tokens === null) {
-      head = `– /${kUnits(raw)}${model}`
+      head = `– /${kUnits(raw)}`
       if (v.lastCompact) {
         const { before, after } = v.lastCompact
         segs.push(`compacted ${before === null ? '?' : kUnits(before)}→${after === null ? '?' : kUnits(after)}`)
       }
     } else {
       const pct = Math.floor((v.tokens * 100) / raw)
-      head = `${pct >= o.warnAt ? '!' : ''}${bar(v.tokens, raw)} ${pct}% ${kUnits(v.tokens)}/${kUnits(raw)}${model}`
+      head = `${pct >= o.warnAt ? '!' : ''}${bar(v.tokens, raw)} ${pct}% ${kUnits(v.tokens)}/${kUnits(raw)}`
       if (v.cachePct !== null) segs.push(`cache ${v.cachePct}%`)
       if (!autoOn) segs.push('autocompact off')
       else if (threshold !== null) {

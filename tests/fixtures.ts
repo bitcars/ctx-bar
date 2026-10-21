@@ -35,9 +35,8 @@ export const F_ROWS: readonly Row[] = [
   row("F14", {tokens:167001}, {}, "!▕████████░░▏ 83% 167k/200k · compact due"),
   row("F15", {tokens:233000,autoOn:false,threshold:null}, {}, "!▕██████████▏ 116% 233k/200k · autocompact off"),
   row("F16", {tokens:45335}, {}, "▕██░░░░░░░░▏ 22% 45k/200k · compact in 121k"),
-  row("F17", {tokens:45335,window:1000000}, {}, "▕██░░░░░░░░▏ 22% 45k/200k (model 1M) · compact in 121k"),
+  row("F17", {tokens:45335,window:1000000}, {}, "▕██░░░░░░░░▏ 22% 45k/200k · compact in 121k"),
   row("F18", {tokens:45335,window:200999}, {}, "▕██░░░░░░░░▏ 22% 45k/200k · compact in 121k"),
-  row("F18a", {tokens:45335,window:201000}, {}, "▕██░░░░░░░░▏ 22% 45k/200k (model 201k) · compact in 121k"),
   row("F18b", {tokens:45335,window:199999}, {}, "▕██░░░░░░░░▏ 22% 45k/199k"),
   row("F19", {tokens:210000}, {}, "!▕██████████▏ 105% 210k/200k · compact due"),
   row("F22", {tokens:45335,cachePct:99}, {}, "▕██░░░░░░░░▏ 22% 45k/200k · cache 99% · compact in 121k"),
@@ -75,33 +74,33 @@ export const F_ROWS: readonly Row[] = [
   row("F50", {tokens:45335,window:NaN,rawMax:null}, {}, undefined),
   row("F51", {tokens:45335,cost:-0.5}, {}, "▕██░░░░░░░░▏ 22% 45k/200k · compact in 121k"),
   row("F52", {tokens:45335,cost:NaN}, {}, "▕██░░░░░░░░▏ 22% 45k/200k · compact in 121k"),
-  row("F45", {tokens:null,window:1000000,cost:0.51}, {}, "– /200k (model 1M) · $0.51"),
+  row("F45", {tokens:null,window:1000000,cost:0.51}, {}, "– /200k · $0.51"),
 ]
 
 /** Expected status strings for the engine rows (plan v2 §4d, + E12–E15 from review round 1). */
 export const E_STR = {
-  E1: "– /200k (model 1M) · $0.00",
-  E2: "▕██░░░░░░░░▏ 22% 45k/200k (model 1M) · cache 99% · compact in 121k · $0.36",
-  E3: "▕██░░░░░░░░▏ 23% 46k/200k (model 1M) · cache 99% · compact in 120k · $0.51",
-  E4: "– /200k (model 1M) · compacted 182k→24k · $0.51",
-  E4c: "– /200k (model 1M) · compacted 182k→? · $0.51",
-  E6: "– /200k (model 1M)",
-  E6s: "▕██░░░░░░░░▏ 22% 45k/200k (model 1M) · cache 99% · compact in 121k",
-  E7a: "▕██░░░░░░░░▏ 22% 45k/200k (model 1M) · cache 99% · compact in 121k · $0.36",
-  E7b: "▕██░░░░░░░░▏ 23% 46k/200k (model 1M) · cache 99% · compact in 120k · $0.37",
-  E7c: "▕██░░░░░░░░▏ 23% 47k/200k (model 1M) · cache 99% · compact in 119k · $0.38",
-  E8: "▕███░░░░░░░▏ 31% 47k/150k (model 1M) · cache 99% · compact in 69k · $0.38",
+  E1: "– /200k · $0.00",
+  E2: "▕██░░░░░░░░▏ 22% 45k/200k · cache 99% · compact in 121k · $0.36",
+  E3: "▕██░░░░░░░░▏ 23% 46k/200k · cache 99% · compact in 120k · $0.51",
+  E4: "– /200k · compacted 182k→24k · $0.51",
+  E4c: "– /200k · compacted 182k→? · $0.51",
+  E6: "– /200k",
+  E6s: "▕██░░░░░░░░▏ 22% 45k/200k · cache 99% · compact in 121k",
+  E7a: "▕██░░░░░░░░▏ 22% 45k/200k · cache 99% · compact in 121k · $0.36",
+  E7b: "▕██░░░░░░░░▏ 23% 46k/200k · cache 99% · compact in 120k · $0.37",
+  E7c: "▕██░░░░░░░░▏ 23% 47k/200k · cache 99% · compact in 119k · $0.38",
+  E8: "▕███░░░░░░░▏ 31% 47k/150k · cache 99% · compact in 69k · $0.38",
   E9: "– /1M · $0.00",
   E10: "▕███████░░░▏ 75% 150k/200k · cache 99% · $0.36",
-  E12: "▕████████░░▏ 89% 179k/200k (model 1M) · cache 99% · compact due",
-  E12b: "!▕█████████░▏ 90% 180k/200k (model 1M) · cache 99% · compact due",
-  E13: "▕█░░░░░░░░░▏ 12% 24k/200k (model 1M) · cache 99% · compact in 143k · $0.52",
-  E14: "▕██░░░░░░░░▏ 23% 46k/200k (model 1M) · cache 99% · compact in 120k · $0.36",
+  E12: "▕████████░░▏ 89% 179k/200k · cache 99% · compact due",
+  E12b: "!▕█████████░▏ 90% 180k/200k · cache 99% · compact due",
+  E13: "▕█░░░░░░░░░▏ 12% 24k/200k · cache 99% · compact in 143k · $0.52",
+  E14: "▕██░░░░░░░░▏ 23% 46k/200k · cache 99% · compact in 120k · $0.36",
   E15: "▕██░░░░░░░░▏ 23% 46k/200k · cache 99% · compact in 120k · $0.51",
 } as const
 
 /** Plan v2 §4c failing-ID sets, frozen before code (+ F47, F51, F52 added by D7; no existing row changed). */
-export const KILL_KROUND = ["F5", "F6", "F7", "F9", "F11", "F12", "F16", "F17", "F18", "F18a", "F18b", "F22", "F23", "F24", "F24a", "F24b", "F25", "F26", "F27", "F28", "F29", "F30", "F33", "F35", "F37", "F39", "F40", "F47", "F51", "F52"] as const
+export const KILL_KROUND = ["F5", "F6", "F7", "F9", "F11", "F12", "F16", "F17", "F18", "F18b", "F22", "F23", "F24", "F24a", "F24b", "F25", "F26", "F27", "F28", "F29", "F30", "F33", "F35", "F37", "F39", "F40", "F47", "F51", "F52"] as const
 export const KILL_DUEGT = ["F13"] as const
 
 // ---- Pricing fixtures (plan ctx-bar-pricing v2): USD per million tokens.
